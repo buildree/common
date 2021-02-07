@@ -1,7 +1,5 @@
 #!/bin/sh
 
-#rootユーザーで実行 or sudo権限ユーザー
-
 <<COMMENT
 作成者：サイトラボ
 URL：https://www.site-lab.jp/

@@ -24,8 +24,7 @@ echo ""
 }
 
 #ユーザー作成
-start_message
-#echo "centosユーザーを作成します"
+echo "データベースのユーザーとパスワードを作成します"
 #USERNAME='centos'
 RPASSWORD=$(more /dev/urandom  | tr -dc '12345678abcdefghijkmnpqrstuvwxyzABCDEFGHIJKLMNPQRSTUVWXYZ,.+\-\!' | fold -w 12 | grep -i [12345678] | grep -i '[,.+\-\!]' | head -n 1)
 #userパスワード

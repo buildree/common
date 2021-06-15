@@ -6,6 +6,10 @@
 ユーザーの作成やデータベースのユーザーなどを作成するときに使用
 
 - useradd ユーザー作成
+ - apacheを使ったりする方で使用
+
+- centosonly
+ - languageのほうで使用
 
 - dbuseraddデータベースがらみ
 

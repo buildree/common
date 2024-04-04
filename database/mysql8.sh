@@ -1,13 +1,19 @@
 #!/bin/sh
 
+#rootユーザーで実行 or sudo権限ユーザー
+
 <<COMMENT
 作成者：サイトラボ
 URL：https://www.site-lab.jp/
-URL：https://buildree.com/
+URL：https://www.logw.jp/
+
+注意点：conohaのポートは全て許可前提となります。MariaDBがインストールされていない状態となります。
+
+目的：システム更新+MySQL8のインストール
+・MySQL8
+
 
 COMMENT
-
-echo ""
 
 start_message(){
 echo ""
@@ -21,8 +27,12 @@ echo "======================完了======================"
 echo ""
 }
 
+#unicorn7か確認
+if [ -e /etc/redhat-release ]; then
+    DIST="redhat"
+    DIST_VER=`cat /etc/redhat-release | sed -e "s/.*\s\([0-9]\)\..*/\1/"`
 
-#公式リポジトリの追加
+    if [ $DIST = "redhat" ];then
       if [ $DIST_VER = "7" ];then
 
       start_message
@@ -128,7 +138,7 @@ EOF
         systemctl enable mysqld.service
         end_message
 
-        #MySQLの起動
+        #自動起動
         start_message
         echo "MySQLの起動"
         echo ""
@@ -177,3 +187,44 @@ root = ${RPASSWORD}
 unicorn = ${UPASSWORD}
 EOF
         end_message
+
+
+        #cnfファイルの表示
+
+
+
+
+
+        echo ""
+        echo ""
+        cat <<EOF
+ステータスがアクティブの場合は起動成功です
+
+---------------------------------------------
+MySQLのポリシーではパスワードは
+"8文字以上＋大文字小文字＋数値＋記号"
+でないといけないみたいです
+
+MySQLへのログイン方法
+unicornユーザーでログインするには下記コマンドを実行してください
+mysql --defaults-extra-file=/etc/my.cnf.d/unicorn.cnf
+---------------------------------------------
+・slow queryはデフォルトでONとなっています
+・秒数は0.01秒となります
+・/root/pass.txtにパスワードが保存されています
+---------------------------------------------
+EOF
+        echo "データベースのrootユーザーのパスワードは"${RPASSWORD}"です。"
+        echo "データベースのunicornユーザーのパスワードは"${UPASSWORD}"です。"
+
+      else
+        echo "unicorn7ではないため、このスクリプトは使えません。このスクリプトのインストール対象はunicorn7です。"
+      fi
+    fi
+
+else
+  echo "このスクリプトのインストール対象はunicorn7です。unicorn7以外は動きません。"
+  cat <<EOF
+  検証LinuxディストリビューションはDebian・Ubuntu・Fedora・Arch Linux（アーチ・リナックス）となります。
+EOF
+fi

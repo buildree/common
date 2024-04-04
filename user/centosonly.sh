@@ -2,8 +2,8 @@
 
 #ユーザー作成
 start_message
-echo "centosユーザーを作成します"
-USERNAME='centos'
+echo "unicornユーザーを作成します"
+USERNAME='unicorn'
 PASSWORD=$(more /dev/urandom  | tr -d -c '[:alnum:]' | fold -w 10 | head -1)
 
 useradd -m -G nobody -s /bin/bash "${USERNAME}"
@@ -18,5 +18,5 @@ start_message
 echo "パスワードなどを保存"
 cat <<EOF >/root/pass.txt
 ログインユーザー
-centos = ${PASSWORD}
+unicorn = ${PASSWORD}
 EOF

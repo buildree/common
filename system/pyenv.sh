@@ -1,4 +1,19 @@
 #!/bin/sh
+
+echo ""
+
+start_message(){
+echo ""
+echo "======================開始======================"
+echo ""
+}
+
+end_message(){
+echo ""
+echo "======================完了======================"
+echo ""
+}
+
 #pyenvの設定
 start_message
 echo "gitでpyenvをクーロンします"
@@ -23,9 +38,9 @@ start_message
 echo "pythonのリスト確認"
 pyenv install --list
 echo "python3.9.5のインストール"
-env PYTHON_CONFIGURE_OPTS="--enable-shared" pyenv install 3.10.3
+env PYTHON_CONFIGURE_OPTS="--enable-shared" pyenv install 3.10.7
 echo "pythonの設定を変更"
-pyenv global 3.10.3
+pyenv global 3.10.7
 end_message
 
 #pythonの確認

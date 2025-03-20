@@ -30,7 +30,7 @@ start_message
 
 # ユーザー名
 USERNAME='unicorn'
-PASSWORD=$(< /dev/urandom tr -dc '[:alnum:]' | head -c10)
+PASSWORD=$(< /dev/urandom tr -dc '[:alnum:]' | head -c32)
 
        # まずユーザーを作成
        useradd -m -s /bin/bash $USERNAME

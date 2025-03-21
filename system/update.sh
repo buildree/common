@@ -5,7 +5,7 @@
 URL：https://www.site-lab.jp/
 URL：https://buildree.com/
 
-CentOSのアップデートを実行
+RedHat系のアップデートを実行
 
 COMMENT
 
@@ -23,6 +23,6 @@ echo "======================完了======================"
 echo ""
 }
 
-echo "yum updateを実行します"
+echo "システムを最新版に更新します"
 echo ""
-yum -y update
+dnf -y update

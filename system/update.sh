@@ -1,11 +1,5 @@
 #!/bin/sh
 
-<<COMMENT
-
-ミラーサイトの変更とアップデートの実行
-
-COMMENT
-
 # メッセージ表示関数
 start_message(){
 echo ""
@@ -42,33 +36,33 @@ set_japanese_mirrors() {
         return 1
     fi
 
+    # リポジトリファイルのバックアップ
+    mkdir -p /root/repo_backup
+    cp /etc/yum.repos.d/* /root/repo_backup/
+
     # 日本のミラーサイト（理化学研究所）
     RIKEN_MIRROR="https://ftp.riken.jp/Linux"
 
-    # OSごとにミラーサイトを設定
+    # OSごとのリポジトリ設定
     case $OS in
         "rocky")
-            sed -i 's|^mirrorlist=|#mirrorlist=|g' /etc/yum.repos.d/Rocky-*.repo
-            sed -i "s|^#baseurl=http://dl.rockylinux.org|baseurl=$RIKEN_MIRROR/rocky|g" /etc/yum.repos.d/Rocky-*.repo
+            # BaseOSリポジトリの設定
+            dnf config-manager --disable '*'
+            dnf config-manager --enable baseos
+            dnf config-manager --enable appstream
+            dnf config-manager --setopt=baseos.baseurl=$RIKEN_MIRROR/rocky/\$releasever/BaseOS/\$basearch/os/ --save
+            dnf config-manager --setopt=appstream.baseurl=$RIKEN_MIRROR/rocky/\$releasever/AppStream/\$basearch/os/ --save
             ;;
         "almalinux")
-            sed -i 's|^mirrorlist=|#mirrorlist=|g' /etc/yum.repos.d/almalinux*.repo
-            sed -i "s|^#baseurl=https://repo.almalinux.org|baseurl=$RIKEN_MIRROR/almalinux|g" /etc/yum.repos.d/almalinux*.repo
-            ;;
-        "centos-stream")
-            sed -i 's|^mirrorlist=|#mirrorlist=|g' /etc/yum.repos.d/centos*.repo
-            sed -i "s|^#baseurl=http://vault.centos.org|baseurl=$RIKEN_MIRROR/centos|g" /etc/yum.repos.d/centos*.repo
-            ;;
-        "ol")
-            sed -i 's|^mirrorlist=|#mirrorlist=|g' /etc/yum.repos.d/ol*.repo
-            sed -i "s|^#baseurl=https://yum.oracle.com|baseurl=$RIKEN_MIRROR/oracle|g" /etc/yum.repos.d/ol*.repo
-            ;;
-        "rhel")
-            sed -i 's|^mirrorlist=|#mirrorlist=|g' /etc/yum.repos.d/rhel*.repo
-            sed -i "s|^#baseurl=https://repo.rhel.com|baseurl=$RIKEN_MIRROR/rhel|g" /etc/yum.repos.d/rhel*.repo
+            # BaseOSリポジトリの設定
+            dnf config-manager --disable '*'
+            dnf config-manager --enable baseos
+            dnf config-manager --enable appstream
+            dnf config-manager --setopt=baseos.baseurl=$RIKEN_MIRROR/almalinux/\$releasever/BaseOS/\$basearch/os/ --save
+            dnf config-manager --setopt=appstream.baseurl=$RIKEN_MIRROR/almalinux/\$releasever/AppStream/\$basearch/os/ --save
             ;;
         *)
-            echo "このOSには対応していません: $OS"
+            echo "このOSのミラーサイト設定は未対応です: $OS"
             return 1
             ;;
     esac

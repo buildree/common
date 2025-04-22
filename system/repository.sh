@@ -127,12 +127,12 @@ if [ "$INSTALL_MYSQL" = true ]; then
     if [ "$MYSQL_VERSION" = "84" ]; then
         # MySQL 8.4用のリポジトリ設定
         if [ "$DIST_MAJOR_VERSION" = "8" ]; then
-            rpm -ivh https://dev.mysql.com/get/mysql80-community-release-el8-7.noarch.rpm
-            dnf config-manager --disable mysql80-community
+            rpm -ivh https://dev.mysql.com/get/mysql84-community-release-el8-1.noarch.rpm
+            dnf config-manager --disable mysql84-community
             dnf config-manager --enable mysql84-community
         elif [ "$DIST_MAJOR_VERSION" = "9" ]; then
-            rpm -ivh https://dev.mysql.com/get/mysql80-community-release-el9-4.noarch.rpm
-            dnf config-manager --disable mysql80-community
+            rpm -ivh https://dev.mysql.com/get/mysql84-community-release-el9-4.noarch.rpm
+            dnf config-manager --disable mysql84-community
             dnf config-manager --enable mysql84-community
         else
             echo "警告: サポートされていないOSバージョンです: $DIST_MAJOR_VERSION"
@@ -144,7 +144,7 @@ if [ "$INSTALL_MYSQL" = true ]; then
     elif [ "$MYSQL_VERSION" = "90" ]; then
         # MySQL 9用のリポジトリ設定
         if [ "$DIST_MAJOR_VERSION" = "8" ]; then
-            rpm -ivh https://dev.mysql.com/get/mysql80-community-release-el8-7.noarch.rpm
+            rpm -ivh https://dev.mysql.com/get/mysql84-community-release-el8-1.noarch.rpm
             dnf config-manager --disable mysql80-community
             dnf config-manager --enable mysql90-community
         elif [ "$DIST_MAJOR_VERSION" = "9" ]; then

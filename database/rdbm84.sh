@@ -6,6 +6,7 @@ URL：https://www.site-lab.jp/
 URL：https://buildree.com/
 
 目的：AlmaLinux/RHEL系システムにMySQL 8.4をセキュアにインストール
+前提：MySQL公式リポジトリはすでに追加済み
 COMMENT
 
 # ログ関数
@@ -13,31 +14,22 @@ log_message() {
   echo -e "\n[$(date '+%Y-%m-%d %H:%M:%S')] $1\n"
 }
 
-# ディストリビューションのバージョン確認
-DIST_VER=$(rpm -E %{rhel})
-log_message "検出したディストリビューションバージョン: $DIST_VER"
-
 # エラーハンドリング関数
 handle_error() {
   log_message "エラーが発生しました: $1"
   exit 1
 }
 
-# 公式リポジトリの追加
-log_message "MySQL 8.4公式リポジトリを追加しています..."
-if [ "$DIST_VER" = "8" ]; then
-  rpm -ivh https://dev.mysql.com/get/mysql84-community-release-el8-1.noarch.rpm || handle_error "リポジトリの追加に失敗しました"
-  yum info mysql-community-server
-elif [ "$DIST_VER" = "9" ]; then
-  rpm -ivh https://dev.mysql.com/get/mysql84-community-release-el9-1.noarch.rpm || handle_error "リポジトリの追加に失敗しました"
-  yum info mysql-community-server
-else
-  handle_error "サポートされていないOSバージョン: $DIST_VER"
-fi
+# ディストリビューションのバージョン確認
+DIST_VER=$(rpm -E %{rhel})
+log_message "検出したディストリビューションバージョン: $DIST_VER"
 
-# GCPキー更新
-log_message "MySQLリポジトリのGPGキーを更新しています..."
-rpm --import https://repo.mysql.com/RPM-GPG-KEY-mysql-2022 || handle_error "GPGキーの更新に失敗しました"
+# 前提確認：MySQLリポジトリが追加されているか確認
+log_message "MySQLリポジトリの存在を確認しています..."
+if ! rpm -qa | grep -q "mysql.*-community-release"; then
+  log_message "警告: MySQLリポジトリが見つかりません。別のスクリプトで事前に追加されている必要があります。"
+  log_message "処理を続行しますが、インストールに失敗する可能性があります。"
+fi
 
 # 元のMySQLを無効化
 log_message "既存のMySQLモジュールを無効化しています..."
@@ -125,7 +117,6 @@ if [ -z "$DB_PASSWORD" ]; then
   handle_error "MySQLの一時パスワードを取得できませんでした"
 fi
 
-# パスワードの生成（安全なパスワードを生成）
 # パスワードの生成（MySQLポリシーに準拠したパスワードを生成）
 RPASSWORD=$(openssl rand -base64 16 | sed 's/[^a-zA-Z0-9]/#/g' | sed 's/^\([a-z]*\)/\u\1/g' | sed 's/$/@1A/')
 UPASSWORD=$(openssl rand -base64 16 | sed 's/[^a-zA-Z0-9]/#/g' | sed 's/^\([a-z]*\)/\u\1/g' | sed 's/$/@1A/')

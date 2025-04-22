@@ -1,130 +1,250 @@
-#!/bin/sh
+#!/bin/bash
 
 <<COMMENT
+作成者：サイトラボ（改善版）
+URL：https://www.site-lab.jp/
 URL：https://buildree.com/
 
-目的：
-・EPELリポジトリのインストール
-・Apache+PHP インストール時のみ remi リポジトリの追加
-・MySQL環境の対応（8.4および9）
-・ディストリビューション毎にGPGキーを変更
-
+目的：AlmaLinux/RHEL系システムにMySQL 8.4をセキュアにインストール
 COMMENT
 
-echo ""
-
-start_message(){
-echo ""
-echo "======================開始======================"
-echo ""
+# ログ関数
+log_message() {
+  echo -e "\n[$(date '+%Y-%m-%d %H:%M:%S')] $1\n"
 }
 
-end_message(){
-echo ""
-echo "======================完了======================"
-echo ""
+# ディストリビューションのバージョン確認
+DIST_VER=$(rpm -E %{rhel})
+log_message "検出したディストリビューションバージョン: $DIST_VER"
+
+# エラーハンドリング関数
+handle_error() {
+  log_message "エラーが発生しました: $1"
+  exit 1
 }
 
-# 実行中のスクリプト名から環境情報を取得
-SCRIPT_NAME=$(basename "$0")
-INSTALL_APACHE_PHP=false
-INSTALL_MYSQL=false
-MYSQL_VERSION=""
-
-# スクリプト名から環境設定を検出
-if [[ "$SCRIPT_NAME" == *"apache_php"* ]]; then
-    INSTALL_APACHE_PHP=true
-fi
-
-if [[ "$SCRIPT_NAME" == *"mysql84"* ]]; then
-    INSTALL_MYSQL=true
-    MYSQL_VERSION="84"
-elif [[ "$SCRIPT_NAME" == *"mysql9"* ]]; then
-    INSTALL_MYSQL=true
-    MYSQL_VERSION="9"
-fi
-
-# EPELリポジトリのインストール
-start_message
-echo "EPELリポジトリをインストールしています..."
-
-# 対応するGPGキーのURLを設定
-case $DIST_ID in
-    "almalinux")
-        GPG_KEY="https://repo.almalinux.org/almalinux/RPM-GPG-KEY-AlmaLinux"
-        ;;
-    "rocky")
-        GPG_KEY="https://download.rockylinux.org/pub/rocky/RPM-GPG-KEY-Rocky-$DIST_VERSION_ID"
-        ;;
-    "centos-stream" | "centos")
-        GPG_KEY="https://www.centos.org/keys/RPM-GPG-KEY-CentOS-Official"
-        ;;
-    "rhel" | "redhat")
-        GPG_KEY="https://www.redhat.com/security/data/fd431d51.txt"
-        ;;
-    "ol")
-        GPG_KEY="https://yum.oracle.com/RPM-GPG-KEY-oracle-ol$DIST_VERSION_ID"
-        ;;
-    *)
-        echo "警告: 認識されないディストリビューションですが、処理を続行します"
-        GPG_KEY="https://repo.almalinux.org/almalinux/RPM-GPG-KEY-AlmaLinux"
-        ;;
-esac
-
-# Keyの更新
-rpm --import $GPG_KEY
-dnf remove -y epel-release
-dnf -y install epel-release
-end_message
-
-# Apache+PHPインストールの場合にのみremiリポジトリをインストール
-if [ "$INSTALL_APACHE_PHP" = true ]; then
-    start_message
-    echo "Apache+PHP環境のための remi リポジトリをインストールしています..."
-    
-    # OSバージョンに基づいてremiリポジトリをインストール
-    if [ "$DIST_MAJOR_VERSION" = "8" ]; then
-        dnf -y install https://rpms.remirepo.net/enterprise/remi-release-8.rpm
-    elif [ "$DIST_MAJOR_VERSION" = "9" ]; then
-        dnf -y install https://rpms.remirepo.net/enterprise/remi-release-9.rpm
-    else
-        echo "警告: サポートされていないOSバージョンです: $DIST_MAJOR_VERSION"
-    fi
-    
-    # remiリポジトリのGPGキーをインポート
-    rpm --import https://rpms.remirepo.net/RPM-GPG-KEY-remi
-    echo "remiリポジトリのインストールが完了しました。"
-    end_message
+# 公式リポジトリの追加
+log_message "MySQL 8.4公式リポジトリを追加しています..."
+if [ "$DIST_VER" = "8" ]; then
+  # リポジトリがすでにインストールされているか確認
+  if rpm -q mysql84-community-release > /dev/null; then
+    log_message "MySQL 8.4リポジトリはすでにインストールされています。スキップします。"
+  else
+    rpm -ivh https://dev.mysql.com/get/mysql84-community-release-el8-1.noarch.rpm || handle_error "リポジトリの追加に失敗しました"
+  fi
+  yum info mysql-community-server || log_message "mysql-community-serverパッケージ情報を取得できませんでした。"
+elif [ "$DIST_VER" = "9" ]; then
+  # リポジトリがすでにインストールされているか確認
+  if rpm -q mysql84-community-release > /dev/null; then
+    log_message "MySQL 8.4リポジトリはすでにインストールされています。スキップします。"
+  else
+    rpm -ivh https://dev.mysql.com/get/mysql84-community-release-el9-1.noarch.rpm || handle_error "リポジトリの追加に失敗しました"
+  fi
+  yum info mysql-community-server || log_message "mysql-community-serverパッケージ情報を取得できませんでした。"
 else
-    echo "Apache+PHP環境インストールではないため、remiリポジトリはインストールされません。"
+  handle_error "サポートされていないOSバージョン: $DIST_VER"
 fi
 
-# MySQL環境のリポジトリ設定
-if [ "$INSTALL_MYSQL" = true ]; then
-    start_message
-    echo "MySQL $MYSQL_VERSION 環境のためのリポジトリを設定しています..."
-    
-    if [ "$MYSQL_VERSION" = "84" ]; then
-        # MySQL 8.4用のリポジトリ設定
-        if [ "$DIST_MAJOR_VERSION" = "8" ]; then
-            rpm -ivh https://dev.mysql.com/get/mysql84-community-release-el8-1.noarch.rpm
-        elif [ "$DIST_MAJOR_VERSION" = "9" ]; then
-            rpm -ivh https://dev.mysql.com/get/mysql84-community-release-el9-1.noarch.rpm
-        else
-            echo "警告: サポートされていないOSバージョンです: $DIST_MAJOR_VERSION"
-        fi
-        
-        # MySQL 8.4リポジトリのGPGキーをインポート
-        rpm --import https://repo.mysql.com/RPM-GPG-KEY-mysql-2022
-        echo "MySQL 8.4リポジトリの設定が完了しました。"
-    elif [ "$MYSQL_VERSION" = "9" ]; then
-        # MySQL 9用のリポジトリ設定（将来の対応）
-        echo "MySQL 9はまだリリースされていないため、リポジトリ設定をスキップします。"
-        echo "MySQL 9がリリースされたら、このスクリプトを更新してください。"
-        # 将来的にMySQL 9がリリースされたら、ここにリポジトリURLを追加
+# GCPキー更新
+log_message "MySQLリポジトリのGPGキーを更新しています..."
+rpm --import https://repo.mysql.com/RPM-GPG-KEY-mysql-2022 || log_message "GPGキーの更新に失敗しましたが、続行します。"
+
+# 元のMySQLを無効化
+log_message "既存のMySQLモジュールを無効化しています..."
+dnf module disable -y mysql || log_message "MySQLモジュールの無効化に失敗したか、モジュールが存在しません。続行します。"
+
+# MySQL がすでにインストールされているか確認
+if rpm -q mysql-community-server > /dev/null; then
+  log_message "MySQL 8.4はすでにインストールされています。インストール手順をスキップします。"
+  # バージョン確認
+  log_message "MySQLのバージョン確認:"
+  mysqld --version || handle_error "MySQLバージョン確認に失敗しました"
+else
+  # インストール
+  log_message "MySQL Community Serverをインストールしています..."
+  dnf install -y mysql-community-server || handle_error "MySQLのインストールに失敗しました"
+
+  # バージョン確認
+  log_message "MySQLのバージョン確認:"
+  mysqld --version || handle_error "MySQLバージョン確認に失敗しました"
+fi
+
+# my.cnfの設定を変える
+log_message "MySQL設定ファイルを構成しています..."
+# バックアップを作成
+if [ -f /etc/my.cnf ]; then
+  cp /etc/my.cnf /etc/my.cnf.backup.$(date +%Y%m%d%H%M%S) || log_message "my.cnfのバックアップに失敗しました。続行します。"
+fi
+
+if [ -f /etc/my.cnf.d/mysql-server.cnf ]; then
+  cp /etc/my.cnf.d/mysql-server.cnf /etc/my.cnf.d/mysql-server.cnf.backup.$(date +%Y%m%d%H%M%S) || log_message "mysql-server.cnfのバックアップに失敗しました。続行します。"
+fi
+
+# Slowクエリログディレクトリの作成
+if [ ! -d /var/log/mysql ]; then
+  mkdir -p /var/log/mysql
+  chown mysql:mysql /var/log/mysql
+fi
+
+# 新しい設定ファイルを作成
+cat <<EOF > /etc/my.cnf
+# MySQL 8.4 設定ファイル
+# 参考: http://dev.mysql.com/doc/refman/8.4/en/server-configuration-defaults.html
+
+[mysqld]
+# 基本設定
+datadir=/var/lib/mysql
+socket=/var/lib/mysql/mysql.sock
+log-error=/var/log/mysqld.log
+pid-file=/var/run/mysqld/mysqld.pid
+
+# 文字コード設定
+character-set-server = utf8mb4
+collation-server = utf8mb4_bin
+
+# セキュリティ設定
+default_password_lifetime = 0
+max_allowed_packet = 16M
+max_connections = 151
+bind-address = 127.0.0.1
+
+# パフォーマンス設定
+innodb_buffer_pool_size = 128M
+join_buffer_size = 2M
+sort_buffer_size = 2M
+read_rnd_buffer_size = 2M
+
+# Slowクエリログ設定
+slow_query_log = ON
+slow_query_log_file = /var/log/mysql/mysql-slow.log
+long_query_time = 1.0
+log_queries_not_using_indexes = ON
+
+# タイムアウト設定
+interactive_timeout = 28800
+wait_timeout = 28800
+
+[client]
+default-character-set = utf8mb4
+EOF
+
+# MySQL自動起動を設定
+log_message "MySQLの自動起動を設定しています..."
+systemctl enable mysqld.service || handle_error "自動起動の設定に失敗しました"
+
+# MySQLサービスのステータス確認
+MYSQL_STATUS=$(systemctl is-active mysqld.service)
+if [ "$MYSQL_STATUS" = "active" ]; then
+  log_message "MySQLサービスは既に実行中です。再起動します..."
+  systemctl restart mysqld.service || handle_error "MySQLの再起動に失敗しました"
+else
+  # MySQLの起動
+  log_message "MySQLを起動しています..."
+  systemctl start mysqld.service || handle_error "MySQLの起動に失敗しました"
+fi
+
+# パスワード設定
+log_message "MySQLのセキュリティ設定を行っています..."
+
+# MySQLが起動するまで少し待機
+sleep 5
+
+# rootパスワードが設定済みか確認
+mysql_secure_connection_established=false
+if mysqladmin -u root status &>/dev/null; then
+  log_message "MySQLのrootパスワードは既に設定されています。"
+  mysql_secure_connection_established=true
+else
+  # 一時パスワードを取得
+  DB_PASSWORD=$(grep "A temporary password is generated" /var/log/mysqld.log | sed -s 's/.*root@localhost: //')
+  if [ -z "$DB_PASSWORD" ]; then
+    log_message "MySQLの一時パスワードを取得できませんでした。手動での設定が必要かもしれません。"
+  else
+    # パスワードの生成（セキュリティポリシーに準拠したパスワードを生成）
+    RPASSWORD=$(openssl rand -base64 16 | sed 's/[^a-zA-Z0-9]/#/g' | sed 's/^\([a-z]*\)/\u\1/g' | sed 's/$/@1A/')
+    UPASSWORD=$(openssl rand -base64 16 | sed 's/[^a-zA-Z0-9]/#/g' | sed 's/^\([a-z]*\)/\u\1/g' | sed 's/$/@1A/')
+
+    # rootパスワードの変更を試みる
+    log_message "MySQLのrootパスワードを変更しています..."
+    # まずパスワードポリシーを一時的に緩和してみる
+    if mysql -u root -p"${DB_PASSWORD}" --connect-expired-password -e "SET GLOBAL validate_password.policy=LOW; SET GLOBAL validate_password.length=8; ALTER USER 'root'@'localhost' IDENTIFIED BY '${RPASSWORD}'; FLUSH PRIVILEGES;" 2>/dev/null; then
+      log_message "rootパスワードの変更に成功しました。"
+      mysql_secure_connection_established=true
     else
-        echo "警告: 認識されないMySQLバージョンです: $MYSQL_VERSION"
+      # 上記が失敗した場合、他の方法を試す
+      log_message "標準的な方法でのパスワード変更に失敗しました。代替方法を試します..."
+      if mysql -u root -p"${DB_PASSWORD}" --connect-expired-password -e "ALTER USER 'root'@'localhost' IDENTIFIED BY '${RPASSWORD}'; FLUSH PRIVILEGES;" 2>/dev/null; then
+        log_message "代替方法でrootパスワードの変更に成功しました。"
+        mysql_secure_connection_established=true
+      else
+        log_message "rootパスワードの変更に失敗しました。手動での設定が必要かもしれません。"
+      fi
     fi
-    
-    end_message
+  fi
+fi
+
+# セキュリティ設定が成功した場合だけ続行
+if [ "$mysql_secure_connection_established" = true ]; then
+  # DBとユーザーの作成
+  log_message "アプリケーション用のデータベースとユーザーを作成しています..."
+  
+  # unicornデータベースが既に存在するか確認
+  if mysql -u root -p"${RPASSWORD}" -e "SHOW DATABASES LIKE 'unicorn'" | grep -q unicorn; then
+    log_message "unicornデータベースは既に存在します。スキップします。"
+  else
+    cat <<EOF >/tmp/createdb.sql
+CREATE DATABASE IF NOT EXISTS unicorn DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_bin;
+CREATE USER IF NOT EXISTS 'unicorn'@'localhost' IDENTIFIED BY '${UPASSWORD}';
+GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, DROP, INDEX, ALTER, CREATE TEMPORARY TABLES ON unicorn.* TO 'unicorn'@'localhost';
+FLUSH PRIVILEGES;
+SELECT user, host FROM mysql.user;
+EOF
+
+    mysql -u root -p"${RPASSWORD}" -e "source /tmp/createdb.sql" || log_message "データベースとユーザーの作成に失敗しました。手動での設定が必要かもしれません。"
+    rm -f /tmp/createdb.sql  # 一時ファイルを削除
+  fi
+
+  # クライアント設定ファイルを保存（600権限で）
+  log_message "クライアント設定ファイルを作成しています..."
+  cat <<EOF >/etc/my.cnf.d/unicorn.cnf
+[client]
+user = unicorn
+password = ${UPASSWORD}
+host = localhost
+EOF
+  chmod 600 /etc/my.cnf.d/unicorn.cnf
+
+  # MySQLサービスの再起動
+  log_message "MySQLサービスを再起動しています..."
+  systemctl restart mysqld.service || handle_error "MySQLの再起動に失敗しました"
+
+  # パスワードの保存（600権限で）
+  log_message "認証情報を保存しています..."
+  cat <<EOF >/root/mysql_credentials.txt
+# MySQL認証情報 - $(date '+%Y-%m-%d %H:%M:%S')に生成
+# このファイルは機密情報を含みます。適切に保護してください。
+root_user = root
+root_password = ${RPASSWORD}
+app_user = unicorn
+app_password = ${UPASSWORD}
+EOF
+  chmod 600 /root/mysql_credentials.txt
+
+  log_message "MySQLのセキュリティ強化を実施しています..."
+  # 追加のセキュリティ設定（不要なアカウントの削除、リモートrootログイン無効化など）
+  mysql -u root -p"${RPASSWORD}" <<EOF
+DELETE FROM mysql.user WHERE User='';
+DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.1', '::1');
+DROP DATABASE IF EXISTS test;
+DELETE FROM mysql.db WHERE Db='test' OR Db='test\\_%';
+FLUSH PRIVILEGES;
+EOF
+fi
+
+log_message "MySQL 8.4のインストールと設定が完了しました"
+if [ "$mysql_secure_connection_established" = true ]; then
+  log_message "認証情報は /root/mysql_credentials.txt に保存されています"
+  log_message "セキュリティのため、重要な環境では認証情報をより安全な場所に移動することを検討してください"
+else
+  log_message "注意: 一部のセキュリティ設定に問題がありました。必要に応じて手動で設定を確認してください。"
 fi

@@ -126,9 +126,9 @@ if [ -z "$DB_PASSWORD" ]; then
 fi
 
 # パスワードの生成（安全なパスワードを生成）
-# 特殊文字を減らして問題を避ける
-RPASSWORD=$(openssl rand -base64 12 | tr -d "=/+")
-UPASSWORD=$(openssl rand -base64 12 | tr -d "=/+")
+# パスワードの生成（MySQLポリシーに準拠したパスワードを生成）
+RPASSWORD=$(openssl rand -base64 16 | sed 's/[^a-zA-Z0-9]/#/g' | sed 's/^\([a-z]*\)/\u\1/g' | sed 's/$/@1A/')
+UPASSWORD=$(openssl rand -base64 16 | sed 's/[^a-zA-Z0-9]/#/g' | sed 's/^\([a-z]*\)/\u\1/g' | sed 's/$/@1A/')
 
 # rootパスワードの変更
 log_message "MySQLのrootパスワードを変更しています..."

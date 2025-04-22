@@ -14,16 +14,29 @@ COMMENT
 echo ""
 
 start_message(){
-echo ""
-echo "======================開始======================"
-echo ""
+    echo ""
+    echo "======================開始======================"
+    echo ""
 }
 
 end_message(){
-echo ""
-echo "======================完了======================"
-echo ""
+    echo ""
+    echo "======================完了======================"
+    echo ""
 }
+
+# ディストリビューション情報を取得
+if [ -f /etc/os-release ]; then
+    . /etc/os-release
+    DIST_ID=$ID
+    DIST_VERSION_ID=$VERSION_ID
+    DIST_MAJOR_VERSION=$(echo $VERSION_ID | cut -d. -f1)
+else
+    echo "警告: /etc/os-release が見つかりません。デフォルト値を使用します。"
+    DIST_ID="unknown"
+    DIST_VERSION_ID="0"
+    DIST_MAJOR_VERSION="0"
+fi
 
 # 実行中のスクリプト名から環境情報を取得
 SCRIPT_NAME=$(basename "$0")
@@ -34,17 +47,24 @@ MYSQL_VERSION=""
 # スクリプト名から環境設定を検出
 if [[ "$SCRIPT_NAME" == *"apache_php"* ]]; then
     INSTALL_APACHE_PHP=true
+    
+    # Apache+PHPに加えて、MySQLの設定もチェック
+    if [[ "$SCRIPT_NAME" == *"mysql84"* ]]; then
+        INSTALL_MYSQL=true
+        MYSQL_VERSION="84"
+    elif [[ "$SCRIPT_NAME" == *"mysql90"* ]]; then
+        INSTALL_MYSQL=true
+        MYSQL_VERSION="90"
+    fi
 fi
 
-if [[ "$SCRIPT_NAME" == *"mysql84"* ]]; then
-    INSTALL_MYSQL=true
-    MYSQL_VERSION="84"
-elif [[ "$SCRIPT_NAME" == *"mysql9"* ]]; then
-    INSTALL_MYSQL=true
-    MYSQL_VERSION="9"
-fi
+echo "検出された設定:"
+echo "ディストリビューション: $DIST_ID $DIST_VERSION_ID (メジャーバージョン: $DIST_MAJOR_VERSION)"
+echo "Apache+PHP: $INSTALL_APACHE_PHP"
+echo "MySQL: $INSTALL_MYSQL (バージョン: $MYSQL_VERSION)"
+echo ""
 
-# EPELリポジトリのインストール
+# EPELリポジトリのインストール - すべての場合に実行
 start_message
 echo "EPELリポジトリをインストールしています..."
 
@@ -107,9 +127,13 @@ if [ "$INSTALL_MYSQL" = true ]; then
     if [ "$MYSQL_VERSION" = "84" ]; then
         # MySQL 8.4用のリポジトリ設定
         if [ "$DIST_MAJOR_VERSION" = "8" ]; then
-            rpm -ivh https://dev.mysql.com/get/mysql84-community-release-el8-1.noarch.rpm
+            rpm -ivh https://dev.mysql.com/get/mysql80-community-release-el8-7.noarch.rpm
+            dnf config-manager --disable mysql80-community
+            dnf config-manager --enable mysql84-community
         elif [ "$DIST_MAJOR_VERSION" = "9" ]; then
-            rpm -ivh https://dev.mysql.com/get/mysql84-community-release-el9-1.noarch.rpm
+            rpm -ivh https://dev.mysql.com/get/mysql80-community-release-el9-4.noarch.rpm
+            dnf config-manager --disable mysql80-community
+            dnf config-manager --enable mysql84-community
         else
             echo "警告: サポートされていないOSバージョンです: $DIST_MAJOR_VERSION"
         fi
@@ -117,14 +141,29 @@ if [ "$INSTALL_MYSQL" = true ]; then
         # MySQL 8.4リポジトリのGPGキーをインポート
         rpm --import https://repo.mysql.com/RPM-GPG-KEY-mysql-2022
         echo "MySQL 8.4リポジトリの設定が完了しました。"
-    elif [ "$MYSQL_VERSION" = "9" ]; then
-        # MySQL 9用のリポジトリ設定（将来の対応）
-        echo "MySQL 9はまだリリースされていないため、リポジトリ設定をスキップします。"
-        echo "MySQL 9がリリースされたら、このスクリプトを更新してください。"
-        # 将来的にMySQL 9がリリースされたら、ここにリポジトリURLを追加
+    elif [ "$MYSQL_VERSION" = "90" ]; then
+        # MySQL 9用のリポジトリ設定
+        if [ "$DIST_MAJOR_VERSION" = "8" ]; then
+            rpm -ivh https://dev.mysql.com/get/mysql80-community-release-el8-7.noarch.rpm
+            dnf config-manager --disable mysql80-community
+            dnf config-manager --enable mysql90-community
+        elif [ "$DIST_MAJOR_VERSION" = "9" ]; then
+            rpm -ivh https://dev.mysql.com/get/mysql80-community-release-el9-4.noarch.rpm
+            dnf config-manager --disable mysql80-community
+            dnf config-manager --enable mysql90-community
+        else
+            echo "警告: サポートされていないOSバージョンです: $DIST_MAJOR_VERSION"
+        fi
+        
+        # MySQL 9リポジトリのGPGキーをインポート
+        rpm --import https://repo.mysql.com/RPM-GPG-KEY-mysql-2022
+        echo "MySQL 9リポジトリの設定が完了しました。"
+        echo "注意: MySQL 9がまだ公式にリリースされていない場合、このリポジトリは機能しない可能性があります。"
     else
         echo "警告: 認識されないMySQLバージョンです: $MYSQL_VERSION"
     fi
     
     end_message
 fi
+
+echo "すべてのリポジトリ設定が完了しました。"

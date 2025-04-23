@@ -139,11 +139,12 @@ mysql -u root -p"${RPASSWORD}" -e "source /tmp/createdb.sql" || handle_error "�
 rm -f /tmp/createdb.sql  # 一時ファイルを削除
 
 # クライアント設定ファイルを保存（600権限で）
+# パスワードをシングルクオートで囲む修正
 log_message "クライアント設定ファイルを作成しています..."
 cat <<EOF >/etc/my.cnf.d/unicorn.cnf
 [client]
 user = unicorn
-password = ${UPASSWORD}
+password = '${UPASSWORD}'
 host = localhost
 EOF
 chmod 600 /etc/my.cnf.d/unicorn.cnf

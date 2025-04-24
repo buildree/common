@@ -20,6 +20,11 @@ handle_error() {
   exit 1
 }
 
+# 警告関数 - エラーを出すが処理を続行
+warn_message() {
+  log_message "警告: $1 - 処理を続行します"
+}
+
 # ディストリビューションのバージョン確認
 DIST_VER=$(rpm -E %{rhel})
 log_message "検出したディストリビューションバージョン: $DIST_VER"
@@ -31,9 +36,14 @@ if ! rpm -qa | grep -q "mysql.*-community-release"; then
   log_message "処理を続行しますが、インストールに失敗する可能性があります。"
 fi
 
-# 元のMySQLを無効化
-log_message "既存のMySQLモジュールを無効化しています..."
-dnf module disable -y mysql || handle_error "MySQLモジュールの無効化に失敗しました"
+# 元のMySQLモジュールを無効化（存在する場合のみ）
+log_message "既存のMySQLモジュールの確認と無効化を試みています..."
+if dnf module list mysql &>/dev/null; then
+  log_message "MySQLモジュールが存在します。無効化を試みます..."
+  dnf module disable -y mysql || warn_message "MySQLモジュールの無効化に失敗しました"
+else
+  log_message "システムにMySQLモジュールが見つかりません。無効化をスキップします。"
+fi
 
 # インストール
 log_message "MySQL Community Serverをインストールしています..."
@@ -139,7 +149,6 @@ mysql -u root -p"${RPASSWORD}" -e "source /tmp/createdb.sql" || handle_error "�
 rm -f /tmp/createdb.sql  # 一時ファイルを削除
 
 # クライアント設定ファイルを保存（600権限で）
-# パスワードをシングルクオートで囲む修正
 log_message "クライアント設定ファイルを作成しています..."
 cat <<EOF >/etc/my.cnf.d/unicorn.cnf
 [client]

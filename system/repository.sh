@@ -131,7 +131,7 @@ if [ "$INSTALL_MYSQL" = true ]; then
             dnf config-manager --disable mysql84-community
             dnf config-manager --enable mysql84-community
         elif [ "$DIST_MAJOR_VERSION" = "9" ]; then
-            rpm -ivh https://dev.mysql.com/get/mysql84-community-release-el9-4.noarch.rpm
+            rpm -ivh https://dev.mysql.com/get/mysql84-community-release-el9-1.noarch.rpm
             dnf config-manager --disable mysql84-community
             dnf config-manager --enable mysql84-community
         else

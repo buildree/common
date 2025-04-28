@@ -5,7 +5,7 @@
 URL：https://buildree.com/
 
 目的：AlmaLinux/RHEL系システムにMySQL 9.0をセキュアにインストール
-前提：スクリプト内でMySQL公式リポジトリを追加
+前提：MySQL公式リポジトリはすでに追加済み
 COMMENT
 
 # ログ関数
@@ -28,24 +28,12 @@ warn_message() {
 DIST_VER=$(rpm -E %{rhel})
 log_message "検出したディストリビューションバージョン: $DIST_VER"
 
-# MySQL 9.0公式リポジトリの追加
-log_message "MySQL 9.0リポジトリを追加しています..."
-
-if [ "$DIST_VER" = "8" ]; then
-  log_message "RHEL/AlmaLinux 8向けのリポジトリをインストールします"
-  rpm -ivh https://dev.mysql.com/get/mysql-community-server-9.0.1-1.el8.x86_64.rpm || warn_message "リポジトリのインストールに問題がありました"
-  
-elif [ "$DIST_VER" = "9" ]; then
-  log_message "RHEL/AlmaLinux 9向けのリポジトリをインストールします"
-  rpm -ivh https://dev.mysql.com/get/Downloads/MySQL-9.0/mysql-community-server-9.0.1-1.el9.x86_64.rpm || warn_message "リポジトリのインストールに問題がありました"
-  
-else
-  handle_error "サポートされていないディストリビューションバージョンです: $DIST_VER"
+# 前提確認：MySQLリポジトリが追加されているか確認
+log_message "MySQLリポジトリの存在を確認しています..."
+if ! rpm -qa | grep -q "mysql.*-community-release"; then
+  log_message "警告: MySQLリポジトリが見つかりません。別のスクリプトで事前に追加されている必要があります。"
+  log_message "処理を続行しますが、インストールに失敗する可能性があります。"
 fi
-
-# GPGキーのインポート
-log_message "MySQL GPGキーをインポートしています..."
-rpm --import https://repo.mysql.com/RPM-GPG-KEY-mysql-2022 || warn_message "GPGキーのインポートに失敗しました"
 
 # 元のMySQLモジュールを無効化（存在する場合のみ）
 log_message "既存のMySQLモジュールの確認と無効化を試みています..."

@@ -138,23 +138,47 @@ if [ "$INSTALL_MYSQL" = true ]; then
             echo "警告: サポートされていないOSバージョンです: $DIST_MAJOR_VERSION"
         fi
         
-        # MySQL 8.4リポジトリのGPGキーをインポート
+        # MySQL 9リポジトリのGPGキーをインポート
         rpm --import https://repo.mysql.com/RPM-GPG-KEY-mysql-2022
-        echo "MySQL 8.4リポジトリの設定が完了しました。"
-    elif [ "$MYSQL_VERSION" = "90" ]; then
-        # MySQL 9用のリポジトリ設定
-        if [ "$DIST_MAJOR_VERSION" = "8" ]; then
-            rpm -ivh https://dev.mysql.com/get/mysql84-community-release-el8-1.noarch.rpm
-            dnf config-manager --disable mysql80-community
-            dnf config-manager --enable mysql90-community
-        elif [ "$DIST_MAJOR_VERSION" = "9" ]; then
+        echo "MySQL 9リポジトリの設定が完了しました。"
+elif [ "$MYSQL_VERSION" = "90" ]; then
+    # MySQL 9用のリポジトリ設定
+    if [ "$DIST_MAJOR_VERSION" = "8" ]; then
+        # MySQL 9.0用のEL8リポジトリをインストール
+        rpm -ivh https://dev.mysql.com/get/mysql90-community-release-el8-1.noarch.rpm || {
+            # 9.0パッケージが存在しない場合は、最新のリポジトリを使用し、後で設定を変更
+            echo "MySQL 9.0専用リポジトリが見つかりません。汎用リポジトリを使用します。"
+            rpm -ivh https://dev.mysql.com/get/mysql80-community-release-el8-4.noarch.rpm
+        }
+    elif [ "$DIST_MAJOR_VERSION" = "9" ]; then
+        # MySQL 9.0用のEL9リポジトリをインストール
+        rpm -ivh https://dev.mysql.com/get/mysql90-community-release-el9-1.noarch.rpm || {
+            # 9.0パッケージが存在しない場合は、最新のリポジトリを使用し、後で設定を変更
+            echo "MySQL 9.0専用リポジトリが見つかりません。汎用リポジトリを使用します。"
             rpm -ivh https://dev.mysql.com/get/mysql80-community-release-el9-4.noarch.rpm
-            dnf config-manager --disable mysql80-community
-            dnf config-manager --enable mysql90-community
-        else
-            echo "警告: サポートされていないOSバージョンです: $DIST_MAJOR_VERSION"
-        fi
+        }
+    else
+        echo "警告: サポートされていないOSバージョンです: $DIST_MAJOR_VERSION"
+    fi
+    
+    # すべての既存のMySQLコミュニティリポジトリを無効化
+    dnf config-manager --disable mysql*-community || echo "リポジトリ無効化でエラーが発生しましたが続行します"
+    
+    # MySQL 9.0リポジトリを有効化
+    dnf config-manager --enable mysql90-community || {
+        echo "警告: mysql90-communityリポジトリが見つかりません。"
+        echo "MySQL 9.0がまだ公式にリリースされていない可能性があります。"
+        echo "利用可能な最新バージョンを確認しています..."
         
+        # 利用可能な最新のMySQLリポジトリを有効化
+        LATEST_REPO=$(dnf repolist all | grep "mysql.*-community" | sort -Vr | head -n 1 | awk '{print $1}')
+        if [ -n "$LATEST_REPO" ]; then
+            echo "利用可能な最新のMySQLリポジトリを有効化します: $LATEST_REPO"
+            dnf config-manager --enable "$LATEST_REPO"
+        else
+            echo "MySQLリポジトリが見つかりませんでした。インストールが失敗する可能性があります。"
+        fi
+    }        
         # MySQL 9リポジトリのGPGキーをインポート
         rpm --import https://repo.mysql.com/RPM-GPG-KEY-mysql-2022
         echo "MySQL 9リポジトリの設定が完了しました。"

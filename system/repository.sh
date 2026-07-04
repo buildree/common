@@ -107,6 +107,8 @@ if [ "$INSTALL_APACHE_PHP" = true ]; then
         dnf -y install https://rpms.remirepo.net/enterprise/remi-release-8.rpm
     elif [ "$DIST_MAJOR_VERSION" = "9" ]; then
         dnf -y install https://rpms.remirepo.net/enterprise/remi-release-9.rpm
+    elif [ "$DIST_MAJOR_VERSION" = "10" ]; then
+        dnf -y install https://rpms.remirepo.net/enterprise/remi-release-10.rpm
     else
         echo "警告: サポートされていないOSバージョンです: $DIST_MAJOR_VERSION"
     fi
@@ -134,6 +136,10 @@ if [ "$INSTALL_MYSQL" = true ]; then
             rpm -ivh https://dev.mysql.com/get/mysql84-community-release-el9-1.noarch.rpm
             dnf config-manager --disable mysql84-community
             dnf config-manager --enable mysql84-community
+        elif [ "$DIST_MAJOR_VERSION" = "10" ]; then
+            rpm -ivh https://dev.mysql.com/get/mysql84-community-release-el10-2.noarch.rpm
+            dnf config-manager --disable mysql84-community
+            dnf config-manager --enable mysql84-community
         else
             echo "警告: サポートされていないOSバージョンです: $DIST_MAJOR_VERSION"
         fi
@@ -156,6 +162,13 @@ elif [ "$MYSQL_VERSION" = "90" ]; then
             # 9.0パッケージが存在しない場合は、最新のリポジトリを使用し、後で設定を変更
             echo "MySQL 9.0専用リポジトリが見つかりません。汎用リポジトリを使用します。"
             rpm -ivh https://dev.mysql.com/get/mysql80-community-release-el9-4.noarch.rpm
+        }
+    elif [ "$DIST_MAJOR_VERSION" = "10" ]; then
+        # MySQL 9.0用のEL10リポジトリをインストール
+        rpm -ivh https://dev.mysql.com/get/mysql90-community-release-el10-2.noarch.rpm || {
+            # 9.0パッケージが存在しない場合は、最新のリポジトリを使用し、後で設定を変更
+            echo "MySQL 9.0専用リポジトリが見つかりません。汎用リポジトリを使用します。"
+            rpm -ivh https://dev.mysql.com/get/mysql80-community-release-el10-2.noarch.rpm
         }
     else
         echo "警告: サポートされていないOSバージョンです: $DIST_MAJOR_VERSION"
